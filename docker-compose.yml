@@ -1,0 +1,61 @@
+version: "3.8"
+
+services:
+  # Servicio MySQL
+  mysql:
+    image: mysql:8.0
+    container_name: project_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password_123
+      MYSQL_DATABASE: project_management
+      MYSQL_USER: api_user
+      MYSQL_PASSWORD: api_password_123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    command: --default-authentication-plugin=mysql_native_password
+    networks:
+      - project_network
+
+  # Servicio phpMyAdmin
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: project_phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: root_password_123
+      MYSQL_ROOT_PASSWORD: root_password_123
+    ports:
+      - "8080:80"
+    depends_on:
+      - mysql
+    networks:
+      - project_network
+
+  # Servicio API PHP
+  api:
+    build: .
+    container_name: project_api
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    depends_on:
+      - mysql
+    networks:
+      - project_network
+
+# Volúmenes para persistencia
+volumes:
+  mysql_data:
+    driver: local
+
+# Red personalizada
+networks:
+  project_network:
+    driver: bridge
