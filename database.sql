@@ -24,11 +24,14 @@ CREATE TABLE IF NOT EXISTS projects (
 -- Tabla tareas
 CREATE TABLE IF NOT EXISTS tasks (
     id CHAR(36) PRIMARY KEY,
-    title VARCHAR(200) NOT NULL,
+    title VARCHAR(100) NOT NULL,
     description TEXT,
     priority ENUM('low', 'medium', 'high', 'urgent') DEFAULT 'medium',
     dueDate DATE,
-    status ENUM('backlog', 'in-progress', 'testing', 'completed') DEFAULT 'pending',
+    assignee VARCHAR(100) NOT NULL,
+    workedHours DECIMAL(5,2) DEFAULT 0,
+    completedDate DATETIME DEFAULT CURRENT_TIMESTAMP,
+    status ENUM('backlog', 'in-progress', 'testing', 'completed') DEFAULT 'backlog',
     projectId CHAR(36) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

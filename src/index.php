@@ -62,6 +62,11 @@ $router->add("PATCH", "/tasks/{taskId}/status", function ($taskId) {
     $taskController->updateStatus($taskId);
 });
 
+$router->add("PATCH", "/tasks/{taskId}/worked-hours", function ($taskId) {
+    $taskController = new TaskController();
+    $taskController->updateWorkedHours($taskId);
+});
+
 $router->add("PUT", "/tasks/{taskId}", function ($taskId) {
     $taskController = new TaskController();
     $taskController->update($taskId);

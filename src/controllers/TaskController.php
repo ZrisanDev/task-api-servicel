@@ -23,7 +23,25 @@ class TaskController
     public function getByProjectId($projectId)
     {
         AuthController::authenticate();
-        $tasks = $this->taskModel->getByProjectId($projectId);
+
+        // Obtener parámetros de filtro de fecha desde query string
+        $month = isset($_GET["month"]) ? $_GET["month"] : null;
+        $year = isset($_GET["year"]) ? intval($_GET["year"]) : null;
+
+        // Validar formato de mes si se proporciona (YYYY-MM)
+        if ($month && !preg_match('/^\d{4}-\d{2}$/', $month)) {
+            Response::error("Formato de mes inválido. Use YYYY-MM", 400);
+        }
+
+        // Validar año si se proporciona
+        if ($year && ($year < 2020 || $year > date("Y"))) {
+            Response::error(
+                "Año inválido. Debe estar entre 2020 y " . date("Y"),
+                400,
+            );
+        }
+
+        $tasks = $this->taskModel->getByProjectId($projectId, $month, $year);
         Response::json($tasks);
     }
 
@@ -44,12 +62,19 @@ class TaskController
             }
         }
 
+        // assignee es opcional
+        $assignee = isset($input["assignee"]) ? trim($input["assignee"]) : null;
+        if ($assignee === "") {
+            $assignee = null;
+        } // Convertir string vacío a null
+
         $success = $this->taskModel->create(
             $input["title"],
             $input["description"],
             $input["priority"],
             $input["dueDate"],
-            $projectId, // Usar el projectId de la URL
+            $projectId,
+            $assignee,
         );
 
         if ($success) {
@@ -87,6 +112,46 @@ class TaskController
         }
     }
 
+    public function updateWorkedHours($taskId)
+    {
+        AuthController::authenticate();
+        $input = json_decode(file_get_contents("php://input"), true);
+
+        // Validar que workedHours esté presente
+        if (!isset($input["workedHours"])) {
+            Response::error("workedHours es requerido", 400);
+        }
+
+        // Validar que sea un número válido y positivo
+        $workedHours = floatval($input["workedHours"]);
+        if ($workedHours < 0) {
+            Response::error(
+                "Las horas trabajadas deben ser un número positivo",
+                400,
+            );
+        }
+
+        // Verificar que la tarea existe
+        $task = $this->taskModel->findById($taskId);
+        if (!$task) {
+            Response::error("Tarea no encontrada", 404);
+        }
+
+        // Actualizar las horas trabajadas
+        $success = $this->taskModel->updateWorkedHours($taskId, $workedHours);
+
+        if ($success) {
+            // Retornar la tarea actualizada
+            $updatedTask = $this->taskModel->findById($taskId);
+            Response::json([
+                "message" => "Horas trabajadas actualizadas exitosamente",
+                "task" => $updatedTask,
+            ]);
+        } else {
+            Response::error("Error al actualizar las horas trabajadas", 500);
+        }
+    }
+
     public function update($taskId)
     {
         AuthController::authenticate();
@@ -111,6 +176,20 @@ class TaskController
             Response::error("Tarea no encontrada", 404);
         }
 
+        // assignee y workedHours son opcionales
+        $assignee = isset($input["assignee"]) ? $input["assignee"] : null;
+        $workedHours = isset($input["workedHours"])
+            ? floatval($input["workedHours"])
+            : 0;
+
+        // Validar horas trabajadas
+        if ($workedHours < 0) {
+            Response::error(
+                "Las horas trabajadas deben ser un número positivo",
+                400,
+            );
+        }
+
         $success = $this->taskModel->update(
             $taskId,
             $input["title"],
@@ -119,10 +198,16 @@ class TaskController
             $input["dueDate"],
             $input["status"],
             $input["projectId"],
+            $assignee,
+            $workedHours,
         );
 
         if ($success) {
-            Response::json(["message" => "Tarea actualizada exitosamente"]);
+            $updatedTask = $this->taskModel->findById($taskId);
+            Response::json([
+                "message" => "Tarea actualizada exitosamente",
+                "task" => $updatedTask,
+            ]);
         } else {
             Response::error("Error al actualizar la tarea", 500);
         }
