@@ -6,6 +6,9 @@ require_once "models/User.php";
 require_once "helpers/Response.php";
 require_once "helpers/JWT.php";
 
+// CONFIG
+require_once "config.php";
+
 class AuthController
 {
     private $userModel;
@@ -32,10 +35,10 @@ class AuthController
         $payload = [
             "user_id" => $user["id"],
             "username" => $user["username"],
-            "exp" => time() + Config::JWT_EXPIRE,
+            "exp" => time() + Config::getJwtExpire(),
         ];
 
-        $token = JWT::encode($payload, Config::JWT_SECRET);
+        $token = JWT::encode($payload, Config::getJwtSecret());
 
         Response::json([
             "token" => $token,
@@ -60,7 +63,7 @@ class AuthController
         }
 
         $token = $matches[1];
-        $payload = JWT::decode($token, Config::JWT_SECRET);
+        $payload = JWT::decode($token, Config::getJwtSecret());
 
         if (!$payload) {
             Response::error("Token inválido o expirado", 401);
